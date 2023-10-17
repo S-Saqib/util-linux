@@ -488,6 +488,10 @@ int main(int argc, char ** argv)
 		columns[ncolumns++] = COL_PAGES;
 		columns[ncolumns++] = COL_SIZE;
 		columns[ncolumns++] = COL_FILE;
+		columns[ncolumns++] = COL_DIRTY_PAGES;
+		columns[ncolumns++] = COL_WRITEBACK_PAGES;
+		columns[ncolumns++] = COL_EVICTED_PAGES;
+		columns[ncolumns++] = COL_RECENTLY_EVICTED_PAGES;
 	}
 
 	if (outarg && string_add_to_idarray(outarg, columns, ARRAY_SIZE(columns),
