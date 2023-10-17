@@ -281,14 +281,19 @@ static int do_mincore(struct fincore_control *ctl,
 		return -errno;
 	}
 
-	while (n > 0)
+	for (int i=n; i;)
 	{
-		if (vec[--n] & 0x1)
+		if (vec[--i] & 0x1)
 		{
-			vec[n] = 0;
+			vec[i] = 0;
 			st->cstat.nr_cache++;
 		}
 	}
+
+	for (int i=0; i<n; i++){
+		printf("%u ", vec[i]);
+	}
+	printf("\n");
 
 	return 0;
 }
