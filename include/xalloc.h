@@ -51,8 +51,8 @@ __ul_calloc_size(2, 3)
 __ul_returns_nonnull
 void *xreallocarray(void *ptr, const size_t nelems, const size_t size)
 {
-	void *ret = reallocarray(ptr, nelems, size);
-
+	// void *ret = reallocarray(ptr, nelems, size);
+	void *ret = realloc(ptr, nelems*size);
 	if (!ret && size && nelems)
 		err(XALLOC_EXIT_CODE, "cannot allocate %zu bytes", size);
 	return ret;

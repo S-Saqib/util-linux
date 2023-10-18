@@ -265,7 +265,8 @@ int strv_push(char ***l, char *value) {
         if (m < n)
                 return -ENOMEM;
 
-        c = reallocarray(*l, m, sizeof(char *));
+        // c = reallocarray(*l, m, sizeof(char *));
+	c = realloc(*l, m * sizeof(char *));
         if (!c)
                 return -ENOMEM;
 
