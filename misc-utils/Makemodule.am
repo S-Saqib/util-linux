@@ -238,6 +238,16 @@ fincore_LDADD = $(LDADD) libsmartcols.la libcommon.la
 fincore_CFLAGS = $(AM_CFLAGS) -I$(ul_libsmartcols_incdir)
 endif
 
+
+if BUILD_PAGESTATS
+usrbin_exec_PROGRAMS += pagestats
+MANPAGES += misc-utils/pagestats.1
+dist_noinst_DATA += misc-utils/pagestats.1.adoc
+pagestats_SOURCES = misc-utils/pagestats.c
+pagestats_LDADD = $(LDADD) libsmartcols.la libcommon.la
+pagestats_CFLAGS = $(AM_CFLAGS) -I$(ul_libsmartcols_incdir)
+endif
+
 if BUILD_HARDLINK
 usrbin_exec_PROGRAMS += hardlink
 MANPAGES += misc-utils/hardlink.1
