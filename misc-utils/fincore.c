@@ -269,6 +269,25 @@ static int add_output_data(struct fincore_control *ctl,
 	return 0;
 }
 
+static void verifyData(void *window, const size_t len,
+		       const int pageCount, const int pageSize)
+{
+	// read virtual address and print content
+        int n = pageCount;
+	unsigned charCount = n*pageSize;
+        char* buffer;
+        buffer = (char*) malloc(sizeof(char)*charCount + 1);
+        memcpy(buffer, window, charCount);
+        buffer[charCount] = '\0';
+        printf("%s\n", buffer);
+        /*
+        for (int i=0; i<charCount; i++){
+                printf("%c",
+        }
+        */
+        //printf("\n");
+}
+
 static int do_mincore(struct fincore_control *ctl,
 		      void *window, const size_t len,
 		      struct fincore_state *st)
@@ -285,15 +304,23 @@ static int do_mincore(struct fincore_control *ctl,
 	{
 		if (vec[--i] & 0x1)
 		{
-			vec[i] = 0;
+			/// indicates cache hit
+			vec[i] = 1;
 			st->cstat.nr_cache++;
+		}
+		else {
+			// indicates cache miss
+			vec[i] = 0;
 		}
 	}
 
 	for (int i=0; i<n; i++){
-		printf("%u ", vec[i]);
+		printf("%lu: %u\n", (unsigned long) (window+i*ctl->pagesize), vec[i]);
 	}
-	printf("\n");
+	
+	// Verify if the content matches with that in the file
+	// This is possible with a file having known content
+	verifyData(window, len, n, ctl->pagesize);
 
 	return 0;
 }
