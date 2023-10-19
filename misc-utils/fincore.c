@@ -49,6 +49,13 @@
 #define SYS_cachestat 451
 #endif
 
+typedef struct {
+	uint64_t vpn;
+	uint64_t pfn;
+	int is_file_page;
+	int is_dirty;
+} PageDetailsEntry;
+
 struct cachestat_range {
 	uint64_t off;
 	uint64_t len;
@@ -269,8 +276,7 @@ static int add_output_data(struct fincore_control *ctl,
 	return 0;
 }
 
-static void verifyData(void *window, const size_t len,
-		       const int pageCount, const int pageSize)
+static void verifyData(void *window, const int pageCount, const int pageSize)
 {
 	// read virtual address and print content
         int n = pageCount;
@@ -288,11 +294,48 @@ static void verifyData(void *window, const size_t len,
         //printf("\n");
 }
 
+static void showPageDetails(void *window, const unsigned char *vec,
+				const int pageCount, const int pageSize)
+{
+	int n = pageCount;
+        // uint64_t pagemapFileBufferSize = n*sizeof(uint64_t);
+        uint64_t pagemapFileBufferSize = BUFSIZ;
+        // BUFSIZ = 8192 (?). So how are the page frames of larger files e.g., 1G files read?
+        char pagemapFileBuffer[pagemapFileBufferSize];
+        snprintf(pagemapFileBuffer, sizeof(pagemapFileBuffer), "/proc/%ju/pagemap", (uintmax_t)getpid());
+        int pagemap_fd = 0;
+        int kpage_fd = 0;
+        assert((pagemap_fd = open(pagemapFileBuffer, O_RDONLY)) > 0);
+        assert((kpage_fd = open("/proc/kpageflags", O_RDONLY)) > 0);
+        printf("%llu %llu %d %d\n", (uintmax_t)getpid(), pagemapFileBufferSize, pagemap_fd, kpage_fd);
+        for (int i=0; i<n; i++){
+                unsigned long long vaddr = window+i*pageSize;
+                uintptr_t vpn = vaddr/pageSize;
+                unsigned long long pfn = 0;
+                unsigned isFilePage = 0;
+                unsigned isDirty = -1;
+                uint64_t data;
+                assert(pread(pagemap_fd, ((uint8_t*)&data), sizeof(data), vpn * sizeof(data)) == sizeof(data));
+                pfn = data & (((uint64_t)1 << 55) - 1);
+                isFilePage = (data >> 61) & 1;
+                if (isFilePage)
+                {
+                        assert(pread(kpage_fd, ((uint8_t*)&data), sizeof(data),
+                                pfn * sizeof(data)) == sizeof(data));
+                        isDirty = (data >> 4) & 0x1;
+                }
+                printf("%llu  %u : %llu %llu %u %u\n", vaddr, vec[i], vpn, pfn, isFilePage, isDirty);
+        }
+        close(pagemap_fd);
+        close(kpage_fd);
+}
+
 static int do_mincore(struct fincore_control *ctl,
 		      void *window, const size_t len,
 		      struct fincore_state *st)
 {
 	static unsigned char vec[N_PAGES_IN_WINDOW];
+	// n denotes how many pages we will read
 	int n = (len / ctl->pagesize) + ((len % ctl->pagesize)? 1: 0);
 
 	if (mincore (window, len, vec) < 0) {
@@ -313,14 +356,14 @@ static int do_mincore(struct fincore_control *ctl,
 			vec[i] = 0;
 		}
 	}
-
-	for (int i=0; i<n; i++){
-		printf("%lu: %u\n", (unsigned long) (window+i*ctl->pagesize), vec[i]);
-	}
 	
+	// Check the pagemap entry to find the no physical page is mapped to the virtual pages
+        // showPageDetails(window, vec, n, ctl->pagesize);
 	// Verify if the content matches with that in the file
-	// This is possible with a file having known content
-	verifyData(window, len, n, ctl->pagesize);
+        // This is possible with a file having known content
+	// verifyData(window, n, ctl->pagesize);
+	// Now check pagemap entry again to find the physical pages mapped to the virtual pages
+	showPageDetails(window,vec, n, ctl->pagesize);	
 
 	return 0;
 }
@@ -342,6 +385,7 @@ static int mincore_fd (struct fincore_control *ctl,
 
 		/* PROT_NONE is enough for Linux, but qemu-user wants PROT_READ */
 		window = mmap(window, len, PROT_READ, MAP_PRIVATE, fd, file_offset);
+		// window = mmap(window, len, PROT_READ, MAP_SHARED, fd, file_offset);
 		if (window == MAP_FAILED) {
 			rc = -EINVAL;
 			warn(_("failed to do mmap: %s"), st->name);
@@ -520,10 +564,10 @@ int main(int argc, char ** argv)
 		columns[ncolumns++] = COL_PAGES;
 		columns[ncolumns++] = COL_SIZE;
 		columns[ncolumns++] = COL_FILE;
-		columns[ncolumns++] = COL_DIRTY_PAGES;
-		columns[ncolumns++] = COL_WRITEBACK_PAGES;
-		columns[ncolumns++] = COL_EVICTED_PAGES;
-		columns[ncolumns++] = COL_RECENTLY_EVICTED_PAGES;
+		// columns[ncolumns++] = COL_DIRTY_PAGES;
+		// columns[ncolumns++] = COL_WRITEBACK_PAGES;
+		// columns[ncolumns++] = COL_EVICTED_PAGES;
+		// columns[ncolumns++] = COL_RECENTLY_EVICTED_PAGES;
 	}
 
 	if (outarg && string_add_to_idarray(outarg, columns, ARRAY_SIZE(columns),
