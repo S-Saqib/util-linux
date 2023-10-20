@@ -276,6 +276,48 @@ static int add_output_data(struct fincore_control *ctl,
 	return 0;
 }
 
+static void getServerFO(char *buffer) {
+	char oid[25] = "";
+	char offset[25] = "";
+   	char *start = strstr(buffer, "<<<");
+   	char *end = strstr(buffer, ">");
+   	int j;
+   	if (start && end && start < end) {
+   	// Print the portion between '<<<' and '>>>'
+      	// fwrite(start + 3, 1, end - start - 3, stdout);
+      		for (j=0; j<end-start-3; j++) {
+        		oid[j] = *(start+3+j);
+      		}
+      		oid[j] = '\0';
+   	}
+
+   	start = strstr(buffer, ",<");
+   	end = strstr(buffer, ">>>");
+
+   	if (start && end && start < end) {
+   	// Print the portion between '<<<' and '>>>'
+      	//fwrite(start + 1, 1, end - start - 3, stdout);
+      		for (j=0; j<end-start-2; j++) {
+         		offset[j] = *(start+2+j);
+      		}
+      		offset[j] = '\0';
+   	}
+
+   	printf("0x%llx %s\n", atoll(oid), offset);
+}
+
+
+static void parsePageData(void *window, const int pageSize, const int offset)
+{
+	// read virtual address and print content
+	unsigned charCount = pageSize;
+     	char* buffer;
+     	buffer = (char*) malloc(sizeof(char)*charCount + 1);
+     	memcpy(buffer, window + offset, charCount);
+     	buffer[charCount] = '\0';
+     	getServerFO(buffer);
+}
+
 static void verifyData(void *window, const int pageCount, const int pageSize)
 {
 	// read virtual address and print content
@@ -324,8 +366,11 @@ static void showPageDetails(void *window, const unsigned char *vec,
                                 pfn * sizeof(data)) == sizeof(data));
                         isDirty = (data >> 4) & 0x1;
                 }
-                printf("%llu  %u : %llu %llu %u %u\n", vaddr, vec[i], vpn, pfn, isFilePage, isDirty);
-        }
+		if (vec[i])
+		{
+                	printf("%llu  %u : %llu %llu %u %u\n", vaddr, vec[i], vpn, pfn, isFilePage, isDirty);
+        	}
+	}
         close(pagemap_fd);
         close(kpage_fd);
 }
@@ -348,8 +393,41 @@ static int do_mincore(struct fincore_control *ctl,
 		if (vec[--i] & 0x1)
 		{
 			/// indicates cache hit
-			vec[i] = 1;
 			st->cstat.nr_cache++;
+			unsigned long long vaddr = window+i*ctl->pagesize;
+			printf("%llu  %u : ", vaddr, vec[i]);
+			parsePageData(window, ctl->pagesize, i*ctl->pagesize);
+		}
+		else {
+			// indicates cache miss
+			// vec[i] = 0;
+		}
+	}
+	return 0;
+}
+
+/*
+static int do_mincore(struct fincore_control *ctl,
+		      void *window, const size_t len,
+		      struct fincore_state *st)
+{
+	static unsigned char vec[N_PAGES_IN_WINDOW];
+	// n denotes how many pages we will read
+	int n = (len / ctl->pagesize) + ((len % ctl->pagesize)? 1: 0);
+
+	if (mincore (window, len, vec) < 0) {
+		warn(_("failed to do mincore: %s"), st->name);
+		return -errno;
+	}
+
+	for (int i=n; i;)
+	{
+		if (vec[--i] & 0x1)
+		{
+			/// indicates cache hit
+			// vec[i] = 1;
+			st->cstat.nr_cache++;
+			char *start, *end;
 		}
 		else {
 			// indicates cache miss
@@ -367,6 +445,7 @@ static int do_mincore(struct fincore_control *ctl,
 
 	return 0;
 }
+*/
 
 static int mincore_fd (struct fincore_control *ctl,
 		       int fd,
