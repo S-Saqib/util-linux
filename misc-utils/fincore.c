@@ -303,7 +303,8 @@ static void getServerFO(char *buffer) {
       		offset[j] = '\0';
    	}
 
-   	printf("00%llx %s\n", atoll(oid), offset);
+   	//printf("00%llx %s\n", atoll(oid), offset);
+	printf("%s %s\n", oid, offset);
 }
 
 
