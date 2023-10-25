@@ -396,7 +396,7 @@ static int do_mincore(struct fincore_control *ctl,
 			/// indicates cache hit
 			st->cstat.nr_cache++;
 			unsigned long long vaddr = window+i*ctl->pagesize;
-			printf("%llu  %u : ", vaddr, vec[i]);
+			// printf("%llu  %u : ", vaddr, vec[i]);
 			parsePageData(window, ctl->pagesize, i*ctl->pagesize);
 		}
 		else {
@@ -709,7 +709,7 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	scols_print_table(ctl.tb);
+	//scols_print_table(ctl.tb);
 	scols_unref_table(ctl.tb);
 
 	return rc;
