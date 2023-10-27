@@ -319,6 +319,13 @@ static void parsePageData(void *window, const int pageSize, const int offset)
      	//getServerFO(buffer);
 	// The unique magic string, written in filebench is of length 12 for now
 	buffer[12] = '\0';
+	int cksum = 0;
+	for (int i=0; i < 12; i++){
+		cksum += 'A'+i-buffer[i];
+	}
+	if (cksum) {
+		memset(buffer, 'Z', 12);
+	}
 	printf("%s\n", buffer);
 }
 
