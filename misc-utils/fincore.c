@@ -316,7 +316,10 @@ static void parsePageData(void *window, const int pageSize, const int offset)
      	buffer = (char*) malloc(sizeof(char)*charCount + 1);
      	memcpy(buffer, window + offset, charCount);
      	buffer[charCount] = '\0';
-     	getServerFO(buffer);
+     	//getServerFO(buffer);
+	// The unique magic string, written in filebench is of length 12 for now
+	buffer[12] = '\0';
+	printf("%s\n", buffer);
 }
 
 static void verifyData(void *window, const int pageCount, const int pageSize)
